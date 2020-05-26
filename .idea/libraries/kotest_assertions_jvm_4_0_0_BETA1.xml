@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="kotest-assertions-jvm-4.0.0-BETA1">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/Downloads/kotest-assertions-jvm-4.0.0-BETA1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
