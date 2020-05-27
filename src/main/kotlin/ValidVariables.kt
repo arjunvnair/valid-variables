@@ -1,8 +1,11 @@
 package validvariables
 
+import antlr.gen.JavaParser
+import antlr.gen.JavaParserBaseListener
 import com.google.gson.Gson
 import java.lang.reflect.Type;
 import com.google.gson.reflect.TypeToken;
+import com.sun.org.apache.xpath.internal.operations.Bool
 import java.io.File
 
 val WORD_SPLIT_REGEX : Regex = Regex("(?=[1-9]+)|(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])") // Can be used to split the words in a variable name whether camel case, title case, or upper case (derived from: https://stackoverflow.com/questions/7593969/regex-to-split-camelcase-or-titlecase-advanced)
@@ -37,4 +40,41 @@ fun isDescriptive(idName : String) : Boolean {
         }
     }
     return true
+}
+
+class VariableStatistics () {
+    /**
+     * All nondescriptive variables EXCEPT those declared in for control statements
+     */
+    var allNonDescriptive : Set<String> = mutableSetOf()
+
+    /**
+     * All descriptive variables EXCEPT those declared in for control statements
+     */
+    var allDescriptive : Set<String> = mutableSetOf()
+
+    /**
+     * Get number of all variables EXCEPT those declared in for control statements
+     */
+    fun getNumVars() : Int {
+        return getNumDescriptive() + getNumNonDescriptive()
+    }
+
+    /**
+     * Get number of all nondescriptive variables EXCEPT those declared in for control statements
+     */
+    fun getNumNonDescriptive() : Int {
+        return allNonDescriptive.size
+    }
+
+    /**
+     * Get number of all descriptive variables EXCEPT those declared in for control statements
+     */
+    fun getNumDescriptive() : Int {
+        return allDescriptive.size
+    }
+
+    fun getPercentDescriptive() : Double {
+        return this.getNumDescriptive().toDouble()/this.getNumVars().toDouble()
+    }
 }
