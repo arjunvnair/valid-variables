@@ -23,6 +23,7 @@ class TestValidVariables {
         assertTrue(isDescriptive("tmp"))
         assertTrue(isDescriptive("min"))
         assertTrue(isDescriptive("max"))
+        assertTrue(isDescriptive("numUsersIn"))
     }
 
     @Test
