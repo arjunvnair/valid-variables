@@ -5,7 +5,6 @@ import antlr.gen.JavaParserBaseListener
 import com.google.gson.Gson
 import java.lang.reflect.Type;
 import com.google.gson.reflect.TypeToken;
-import com.sun.org.apache.xpath.internal.operations.Bool
 import java.io.File
 
 val WORD_SPLIT_REGEX : Regex = Regex("(?=[1-9]+)|(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])") // Can be used to split the words in a variable name whether camel case, title case, or upper case (derived from: https://stackoverflow.com/questions/7593969/regex-to-split-camelcase-or-titlecase-advanced)
@@ -42,14 +41,41 @@ fun isDescriptive(idName : String) : Boolean {
     return true
 }
 
+/**
+ * Listener that scrapes variable names
+ */
+class VariableListener() : JavaParserBaseListener() {
+    var variableList : MutableList<String> = mutableListOf()
+
+    private var inForControl : Boolean = false; // Whether the variable analyzer is currently walking through a for control statement
+
+    override fun enterForControl(ctx: JavaParser.ForControlContext?) {
+        inForControl = true;
+    }
+
+    override fun exitForControl(ctx: JavaParser.ForControlContext?) {
+        inForControl = false;
+    }
+
+    override fun enterVariableDeclarator(ctx: JavaParser.VariableDeclaratorContext?) {
+        if(!inForControl) {
+            ctx?.getChild(3)?.getText()?.let { variableList.add(it) }
+        }
+    }
+}
+
+/** -- Unfinished, moving to Python --
+
+data class IdStatistics()
+
 class VariableStatistics () {
     /**
-     * All nondescriptive variables EXCEPT those declared in for control statements
+     * The names of all nondescriptive variables EXCEPT those declared in for control statements
      */
     var allNonDescriptive : Set<String> = mutableSetOf()
 
     /**
-     * All descriptive variables EXCEPT those declared in for control statements
+     * The names of all descriptive variables EXCEPT those declared in for control statements
      */
     var allDescriptive : Set<String> = mutableSetOf()
 
@@ -78,3 +104,4 @@ class VariableStatistics () {
         return this.getNumDescriptive().toDouble()/this.getNumVars().toDouble()
     }
 }
+ */
