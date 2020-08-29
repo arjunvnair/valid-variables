@@ -64,44 +64,11 @@ class VariableListener() : JavaParserBaseListener() {
     }
 }
 
-/** -- Unfinished, moving to Python --
-
-data class IdStatistics()
-
-class VariableStatistics () {
-    /**
-     * The names of all nondescriptive variables EXCEPT those declared in for control statements
-     */
-    var allNonDescriptive : Set<String> = mutableSetOf()
-
-    /**
-     * The names of all descriptive variables EXCEPT those declared in for control statements
-     */
-    var allDescriptive : Set<String> = mutableSetOf()
-
-    /**
-     * Get number of all variables EXCEPT those declared in for control statements
-     */
-    fun getNumVars() : Int {
-        return getNumDescriptive() + getNumNonDescriptive()
-    }
-
-    /**
-     * Get number of all nondescriptive variables EXCEPT those declared in for control statements
-     */
-    fun getNumNonDescriptive() : Int {
-        return allNonDescriptive.size
-    }
-
-    /**
-     * Get number of all descriptive variables EXCEPT those declared in for control statements
-     */
-    fun getNumDescriptive() : Int {
-        return allDescriptive.size
-    }
-
-    fun getPercentDescriptive() : Double {
-        return this.getNumDescriptive().toDouble()/this.getNumVars().toDouble()
-    }
-}
+/*
+ * Statistics on variable names in a piece of code (excludes for control variables)
+ *
+ * @param numDescriptive the number of descriptive variables
+ * @param numTotal the number of variables in total
+ * @param avgLength the average length of a variable
  */
+data class NameStatistics(var numDescriptive : Int, var numTotal : Int, var avgLength : Int)
