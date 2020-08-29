@@ -1,10 +1,17 @@
 package validvariables
 
+import antlr.gen.JavaLexer
 import antlr.gen.JavaParser
 import antlr.gen.JavaParserBaseListener
 import com.google.gson.Gson
 import java.lang.reflect.Type;
 import com.google.gson.reflect.TypeToken;
+import org.antlr.v4.runtime.BaseErrorListener
+import org.antlr.v4.runtime.CharStreams
+import org.antlr.v4.runtime.CommonTokenStream
+import org.antlr.v4.runtime.Recognizer
+import org.antlr.v4.runtime.RecognitionException
+import org.antlr.v4.runtime.tree.ParseTreeWalker
 import java.io.File
 
 val WORD_SPLIT_REGEX : Regex = Regex("(?=[1-9]+)|(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])") // Can be used to split the words in a variable name whether camel case, title case, or upper case (derived from: https://stackoverflow.com/questions/7593969/regex-to-split-camelcase-or-titlecase-advanced)
@@ -50,19 +57,90 @@ class VariableListener() : JavaParserBaseListener() {
     private var inForControl : Boolean = false; // Whether the variable analyzer is currently walking through a for control statement
 
     override fun enterForControl(ctx: JavaParser.ForControlContext?) {
-        inForControl = true;
+        inForControl = true; // We have entered a for control
     }
 
     override fun exitForControl(ctx: JavaParser.ForControlContext?) {
-        inForControl = false;
+        inForControl = false; // We have left the for control
     }
 
     override fun enterVariableDeclarator(ctx: JavaParser.VariableDeclaratorContext?) {
-        if(!inForControl) {
+        if(!inForControl) { // We only add a variable if it is not inside a for control
             ctx?.getChild(3)?.getText()?.let { variableList.add(it) }
         }
     }
 }
+
+/*
+ * Collects name statistics for an entire's file worth of (parseable) Java code
+ */
+fun collectNameStatistics(unit : String) : NameStatistics {
+    val javaParseTree = parseJava(unit).compilationUnit()
+    val listener = VariableListener()
+    val walker = ParseTreeWalker()
+    walker.walk(listener, javaParseTree) // Collect naming statistics
+    val variableList = listener.variableList // Extract the variables from it (excluding for control)
+
+    var lengthSum = 0 // Sum of all variable lengths
+    var numDescriptive = 0 // Count of all descriptive variables
+    var numTotal = variableList.size // Count of all variables
+
+    for (variable in variableList) {
+        lengthSum += variable.length
+        if (isDescriptive(variable)) {
+            numDescriptive++;
+        }
+    }
+    val avgLength = lengthSum/numTotal
+
+    return NameStatistics(numDescriptive, numTotal, avgLength)
+}
+
+/**
+ * Parses Java code.
+ *
+ * @param source - The Java source code to be parsed.
+ * @return Returns a parser.
+ */
+private fun parseJava(source: String): JavaParser {
+    val javaErrorListener = JavaExceptionListener()
+    val charStream = CharStreams.fromString(source)
+    val javaLexer = JavaLexer(charStream)
+    javaLexer.removeErrorListeners()
+    javaLexer.addErrorListener(javaErrorListener)
+
+    val tokenStream = CommonTokenStream(javaLexer)
+    return JavaParser(tokenStream).also {
+        it.removeErrorListeners()
+        it.addErrorListener(javaErrorListener)
+    }
+}
+
+/**
+ * A class that creates a Java Listener.
+ */
+private class JavaExceptionListener : BaseErrorListener() {
+    /**
+     * Detects Java syntax errors.
+     *
+     * @param recognizer -
+     * @param offendingSymbol - The illegal symbol.
+     * @param line - The line [offendingSymbol] was on.
+     * @param charPositionInLine - The character position of [offendingSymbol] within the [line].
+     * @param msg - Error message to display.
+     * @param e -
+     * @throws [JavaParseException]
+     */
+    @Override
+    override fun syntaxError(recognizer: Recognizer<*, *>?, offendingSymbol: Any?, line: Int, charPositionInLine: Int, msg: String, e: RecognitionException?) {
+        throw JavaParseException(line, charPositionInLine, msg)
+    }
+}
+
+/**
+ * A class that holds information about what went wrong while parsing Java code.
+ */
+class JavaParseException(val line: Int, val column: Int, message: String) : Exception(message)
 
 /*
  * Statistics on variable names in a piece of code (excludes for control variables)
