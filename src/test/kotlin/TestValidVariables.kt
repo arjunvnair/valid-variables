@@ -77,6 +77,29 @@ class TestValidVariables {
         assertEquals(nameStatistics.numTotal, 3)
         assertEquals(nameStatistics.avgLength, 34.toDouble()/3)
     }
+
+    @Test
+    fun nameCollectionExcludesForControl() {
+        val unit = """
+        public class Main {
+            final double PI = 3.14; // This is descriptive
+        
+            public static void main(String[] args) {
+                String greetingStatement = "Hello world!"; // This is descriptive
+                int ergserejsgioerj = 5; // This should not count as a descriptive variable name, but it should add to the total
+                System.out.println(greetingStatement);
+                
+                for (int i = 0; i < 40; i++) { // This i should not be counted as it is declared in a for control
+                    System.out.print(i + " ");
+                }
+            }
+        }
+        """
+        val nameStatistics = collectNameStatistics(unit)
+        assertEquals(nameStatistics.numDescriptive, 2)
+        assertEquals(nameStatistics.numTotal, 3)
+        assertEquals(nameStatistics.avgLength, 34.toDouble()/3)
+    }
 }
 
 
