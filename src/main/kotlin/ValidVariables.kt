@@ -66,7 +66,7 @@ class VariableListener() : JavaParserBaseListener() {
 
     override fun enterVariableDeclarator(ctx: JavaParser.VariableDeclaratorContext?) {
         if(!inForControl) { // We only add a variable if it is not inside a for control
-            ctx?.getChild(3)?.getText()?.let { variableList.add(it) }
+            ctx?.getChild(0)?.getText()?.let { variableList.add(it) }
         }
     }
 }
@@ -91,7 +91,7 @@ fun collectNameStatistics(unit : String) : NameStatistics {
             numDescriptive++;
         }
     }
-    val avgLength = lengthSum/numTotal
+    val avgLength : Double = lengthSum.toDouble()/numTotal
 
     return NameStatistics(numDescriptive, numTotal, avgLength)
 }
@@ -149,4 +149,4 @@ class JavaParseException(val line: Int, val column: Int, message: String) : Exce
  * @param numTotal the number of variables in total
  * @param avgLength the average length of a variable
  */
-data class NameStatistics(var numDescriptive : Int, var numTotal : Int, var avgLength : Int)
+data class NameStatistics(var numDescriptive : Int, var numTotal : Int, var avgLength : Double)

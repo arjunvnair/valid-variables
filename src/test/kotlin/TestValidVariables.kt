@@ -1,5 +1,7 @@
 import org.junit.Test
+import validvariables.collectNameStatistics
 import validvariables.isDescriptive
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -55,6 +57,25 @@ class TestValidVariables {
     @Test
     fun notDescriptiveChar() {
         assertFalse(isDescriptive("i")) // A single character is not considered descriptive (though this is still perfectly good style to use in many cases and will be ignored by the analyzer in a for control)
+    }
+
+    @Test
+    fun basicNameCollection() {
+        val unit = """
+        public class Main {
+            final double PI = 3.14; // This is descriptive
+        
+            public static void main(String[] args) {
+                String greetingStatement = "Hello world!"; // This is descriptive
+                int ergserejsgioerj = 5; // This should not count as a descriptive variable name, but it should add to the total
+                System.out.println(greetingStatement);
+            }
+        }
+        """
+        val nameStatistics = collectNameStatistics(unit)
+        assertEquals(nameStatistics.numDescriptive, 2)
+        assertEquals(nameStatistics.numTotal, 3)
+        assertEquals(nameStatistics.avgLength, 34.toDouble()/3)
     }
 }
 
