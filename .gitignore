@@ -1,2 +1,5 @@
 # Project exclude paths
 /out/
+/src/main/resources/credentials.txt
+/people.csv
+/submissions_small.csv

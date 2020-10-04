@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="accessors-smart-1.1">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/Downloads/jar_files (5)/accessors-smart-1.1.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/jar_files (5)/asm-5.0.3.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/jar_files (5)/json-path-2.2.0.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/jar_files (5)/json-smart-2.2.1.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/jar_files (5)/slf4j-api-1.7.16.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
