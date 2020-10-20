@@ -23,6 +23,7 @@ import com.jayway.jsonpath.Configuration.defaultConfiguration
 import com.jayway.jsonpath.JsonPath
 import java.lang.Integer
 import java.util.*
+import javax.swing.text.html.HTML.Tag.P
 import kotlin.system.exitProcess
 
 
@@ -85,7 +86,7 @@ class VariableListener() : JavaParserBaseListener() {
 
 /*
  * Collects name statistics for an entire's file worth of (parseable) Java code
- */
+*/
 fun collectNameStatistics(block : String) : NameStatistics {
     val javaParseTree = parseJava("""{
         $block
@@ -108,6 +109,20 @@ fun collectNameStatistics(block : String) : NameStatistics {
     val avgLength : Double = lengthSum.toDouble()/numTotal
 
     return NameStatistics(numDescriptive, numTotal, avgLength)
+}
+
+/*
+ * Collects name statistics for an entire's file worth of (parseable) Java code
+*/
+fun collectNames(block : String) : List<String> {
+    val javaParseTree = parseJava("""{
+        $block
+}""").block()
+    val listener = VariableListener()
+    val walker = ParseTreeWalker()
+    walker.walk(listener, javaParseTree) // Collect naming statistics
+    val variableList = listener.variableList // Extract the variables from it (excluding for control)
+    return variableList
 }
 
 /**
@@ -235,6 +250,7 @@ fun main() {
     var i = 0 // If you want to skip some number of submissions, replace this number with that
     var submissions : DataFrame = emptyDataFrame() // "email", "timestamp"
     if (!File("submissions.csv").exists()) {
+        emptyDataFrame().writeCSV(File("submissions_in_progress.csv"))
         val submissionsMongo = db.getCollection("plSubmissions")
         val iterable = submissionsMongo.find().skip(i)
         val cursor = iterable.iterator()
@@ -249,20 +265,23 @@ fun main() {
             }
             catch (e : Exception) {}
 
-            var numDescriptiveVar = 0
-            var numTotalVar = 0
-            var avgVarLength = 0.0
+            var variableList : List<String>
 
             try {
                 val encodedSource : String = JsonPath.read(document, "$.submitted_answer._files[0].contents")
                 val decodedSource = String(Base64.getDecoder().decode(encodedSource))
-                val nameStatistics = collectNameStatistics(decodedSource)
-                numDescriptiveVar = nameStatistics.numDescriptive
-                numTotalVar = nameStatistics.numTotal
-                avgVarLength = nameStatistics.avgLength
+                variableList = collectNames(decodedSource)
             }
             catch (e : Exception) {
                 continue // Not having this data makes the entire row useless; thus, move on if it is missing or uncompileable
+            }
+
+            var assessment : Int = -1
+            try {
+                assessment = Integer.parseInt(next["assessment_id"].toString())
+            }
+            catch (e : Exception) {
+                print(e)
             }
 
             var timestamp : String = "N/A"
@@ -278,15 +297,54 @@ fun main() {
                 mode = JsonPath.read(document, "$.mode")
             }
             catch (e : Exception) {}
-            submissions = dataFrameOf(submissions.rows + sequenceOf(mapOf(Pair("email", email), Pair("numDescriptiveVar", numDescriptiveVar), Pair("numTotalVar", numTotalVar), Pair("avgVarLength", avgVarLength), Pair("timestamp", timestamp), Pair("mode", mode))))
-            if (submissions.nrow % 10000 == 0) {
-                submissions.writeCSV(File("submissionse" + submissions.nrow.toString() + "num" + i.toString() + ".csv"))
+            submissions = dataFrameOf(submissions.rows + sequenceOf(mapOf(Pair("email", email), Pair("assessment", assessment), Pair("timestamp", timestamp), Pair("mode", mode), Pair("variableNames", variableList.toString()))))
+            if (submissions.nrow % 10000 == 0) { // The program becomes slow when it has to store a dataframe of millions of row, so we split up processing into chunks of 10k and save in intervals
+                val preloaded_submissions = DataFrame.readCSV("submissions_in_progress.csv")
+                submissions = bindRows(preloaded_submissions, submissions)
+                submissions.writeCSV(File("submissions_in_progress.csv"))
+                submissions = emptyDataFrame()
             }
         }
+        val preloaded_submissions = DataFrame.readCSV("submissions_in_progress.csv")
+        submissions = bindRows(preloaded_submissions, submissions)
         submissions.writeCSV(File("submissions.csv"))
     }
     else {
         submissions = DataFrame.readCSV(File("submissions.csv"))
+    }
+
+    var assessments : DataFrame = emptyDataFrame()
+    if (!File("assessments.csv").exists()) {
+        val assessment_names = submissions["assessment"].values().distinct()
+        for (assessment_name in assessment_names.reversed()) {
+            var emails_processed = HashSet<String>() // We will only consider the FINAL submission for each user so as not to count duplicates; thus, we must keep track of emails
+            var variable_name_counts =  HashMap<String, Int>()
+            val submissions_in_assessment = submissions.filterByRow {s -> s["assessment"] == assessment_name}
+            var num_submissions = 0
+            for (submission in submissions_in_assessment.rows) {
+                val email : String = submission["email"] as String
+                if (emails_processed.contains(email) || email.equals("N/A")) {
+                    continue // Skip everything except for each user's last submission (remember, we're iterating in reverse)
+                }
+                else {
+                    emails_processed.add(email)
+                }
+                num_submissions++
+                val variable_names_str : String = submission["variableNames"] as String
+                val variable_names : Set<String> = variable_names_str.split(",", "[", "]", " ").toSet() // Remove duplicates (remember, local vars can appear 2+ times in the same submission)
+                for (variable_name in variable_names) {
+                    if (variable_name.equals("")) {
+                        continue // The way we parse the string into an array adds a few extra ""s, so we will ignore them
+                    }
+                    variable_name_counts[variable_name] = variable_name_counts.getOrDefault(variable_name, 0) + 1
+                }
+            }
+            assessments = dataFrameOf(assessments.rows + sequenceOf(mapOf(Pair("assessment", assessment_name), Pair("variableNameCounts", variable_name_counts.toString()), Pair("numSubmissions", num_submissions))))
+        }
+        assessments.writeCSV(File("assessments.csv"))
+    }
+    else {
+        assessments = DataFrame.readCSV(File("assessments.csv"))
     }
 
     if (!File("people_updated.csv").exists()) { // We need to add variable stats for each student
